@@ -1,21 +1,24 @@
 package simple_orm
 
 import (
-	"github.com/davecgh/go-spew/spew"
-	"reflect"
+	"errors"
 	"strings"
 )
 
 // Selector 用于构造 SELECT 语句
 type Selector[T any] struct {
-	sb    strings.Builder
-	table string
-	where []*Predicate
-	args  []any
+	sb          strings.Builder
+	table       string
+	where       []*Predicate
+	args        []any
+	tableModels *tableModel
+	db          *DB
 }
 
-func NewSelector[T any]() *Selector[T] {
-	return &Selector[T]{}
+func NewSelector[T any](db *DB) *Selector[T] {
+	return &Selector[T]{
+		db: db,
+	}
 }
 
 // From 指定表名，如果是空字符串，那么将会使用默认表名
@@ -30,12 +33,19 @@ func (s *Selector[T]) Where(where ...*Predicate) *Selector[T] {
 }
 
 func (s *Selector[T]) Build() (*Query, error) {
+	var (
+		t   T
+		err error
+	)
+	s.tableModels, err = s.db.r.get(t)
+	if err != nil {
+		return nil, err
+	}
 	s.sb.WriteString("SELECT * FROM ")
 	// 表名
 	if s.table == "" {
-		var t T
 		s.sb.WriteByte('`')
-		s.sb.WriteString(reflect.TypeOf(t).Name())
+		s.sb.WriteString(s.tableModels.tableName)
 		s.sb.WriteByte('`')
 	} else {
 		s.sb.WriteString(s.table)
@@ -63,11 +73,13 @@ func (s *Selector[T]) Build() (*Query, error) {
 // 递归解析表达式
 // (`Age` > 13) AND (`Age` < 24)
 func (s *Selector[T]) buildExpression(e Expression) error {
-	spew.Println("expression:%v", e)
 	switch expr := e.(type) {
 	case *Column: // 列， eg：`Age`
+		if _, ok := s.tableModels.fieldMap[expr.name]; !ok {
+			return errors.New("illegal field")
+		}
 		s.sb.WriteByte('`')
-		s.sb.WriteString(expr.name)
+		s.sb.WriteString(s.tableModels.fieldMap[expr.name].columnName)
 		s.sb.WriteByte('`')
 	case *Value: // 值，eg： 13
 		s.sb.WriteByte('?')
