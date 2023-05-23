@@ -34,3 +34,9 @@ func DBWithRegister(r *Registry) DBOption {
 		db.r = r
 	}
 }
+
+func RegisterWithModels(models map[reflect.Type]*tableModel) DBOption {
+	return func(db *DB) {
+		db.r.models = models
+	}
+}

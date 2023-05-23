@@ -8,7 +8,8 @@ import (
 )
 
 type field struct {
-	columnName string
+	columnName string // 对应的数据库中表的列
+
 }
 
 type tableModel struct {
