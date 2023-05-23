@@ -13,7 +13,8 @@ type field struct {
 
 type tableModel struct {
 	tableName string            // 表名
-	fieldMap  map[string]*field // 表中各个字段
+	tag2Field map[string]*field // 标签名到字段的映射
+	col2Field map[string]*field // 列名到字段的映射
 }
 
 // Registry 注册中心，存储表信息
@@ -47,29 +48,32 @@ func (r *Registry) parseModel(typ reflect.Type) (*tableModel, error) {
 	if typ.Kind() != reflect.Struct {
 		return nil, errors.New("type is wrong")
 	}
-	fieldMap := map[string]*field{}
+	tag2Field := map[string]*field{}
+	col2Field := map[string]*field{}
 	for i := 0; i < typ.NumField(); i++ {
 		fd := typ.Field(i)
 		fdName := fd.Name
-		// 支持标签，标签的优先级高于字段名
 		/*
 			type student struct {
 				name string `orm:"title"`
 				age  int
 			}
-			fieldMap中的key&value是title，若没配置orm则key&value是name
+			fieldMap中的key是title，若没配置orm则key是name
 		*/
 		tag := fd.Tag.Get("orm")
-		if tag != "" {
-			fdName = tag
+		if tag == "" {
+			tag = fdName
 		}
-		fieldMap[fdName] = &field{
+		tag2Field[tag] = &field{
+			columnName: underscoreName(fdName),
+		}
+		col2Field[fdName] = &field{
 			columnName: underscoreName(fdName),
 		}
 	}
 	return &tableModel{
 		tableName: underscoreName(typ.Name()),
-		fieldMap:  fieldMap,
+		tag2Field: tag2Field,
 	}, nil
 }
 
