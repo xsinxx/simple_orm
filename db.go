@@ -1,14 +1,18 @@
 package simple_orm
 
-import "reflect"
+import (
+	"database/sql"
+	"reflect"
+)
 
 type DBOption func(db *DB)
 
 type DB struct {
-	r *Registry
+	r     *Registry
+	store *sql.DB // 对应具体数据库的存储
 }
 
-func NewDB(opts ...DBOption) (*DB, error) {
+func OpenDB(store *sql.DB, opts ...DBOption) (*DB, error) {
 	db := &DB{
 		r: &Registry{
 			models: map[reflect.Type]*tableModel{},
@@ -18,15 +22,6 @@ func NewDB(opts ...DBOption) (*DB, error) {
 		opt(db)
 	}
 	return db, nil
-}
-
-func MustNewDB(opts ...DBOption) *DB {
-	db, err := NewDB(opts...)
-	// init panic
-	if err != nil {
-		panic(err)
-	}
-	return db
 }
 
 func DBWithRegister(r *Registry) DBOption {
