@@ -7,9 +7,9 @@ import (
 )
 
 func TestDB_Option(t *testing.T) {
-	models := map[reflect.Type]*tableModel{
-		reflect.TypeOf("user"): &tableModel{
-			tableName: "user_t",
+	models := map[reflect.Type]*TableModel{
+		reflect.TypeOf("user"): &TableModel{
+			TableName: "user_t",
 		},
 	}
 	r := &Registry{
@@ -23,27 +23,27 @@ func TestRegistry_get(t *testing.T) {
 	testCases := []struct {
 		name      string
 		val       any
-		wantModel *tableModel
+		wantModel *TableModel
 		wantErr   error
 	}{
 		{
 			// 指针
 			name: "pointer",
 			val:  &TestModel{},
-			wantModel: &tableModel{
-				tableName: "test_model",
-				fieldMap: map[string]*field{
+			wantModel: &TableModel{
+				TableName: "test_model",
+				Col2Field: map[string]*field{
 					"Id": {
-						columnName: "id",
+						ColumnName: "id",
 					},
 					"FirstName": {
-						columnName: "first_name",
+						ColumnName: "first_name",
 					},
 					"Age": {
-						columnName: "age",
+						ColumnName: "age",
 					},
 					"LastName": {
-						columnName: "last_name",
+						ColumnName: "last_name",
 					},
 				},
 			},
@@ -51,12 +51,12 @@ func TestRegistry_get(t *testing.T) {
 	}
 
 	r := &Registry{
-		models: map[reflect.Type]*tableModel{},
+		models: map[reflect.Type]*TableModel{},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			m, err := r.get(tc.val)
+			m, err := r.Get(tc.val)
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
 				return

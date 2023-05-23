@@ -8,23 +8,24 @@ import (
 )
 
 type field struct {
-	columnName string // 对应的数据库中表的列
-
+	ColumnName string // 对应的数据库中表的列
+	Typ        reflect.Type
+	Offset     uintptr
 }
 
-type tableModel struct {
-	tableName string            // 表名
-	tag2Field map[string]*field // 标签名到字段的映射
-	col2Field map[string]*field // 列名到字段的映射
+type TableModel struct {
+	TableName string            // 表名
+	Tag2Field map[string]*field // 标签名到字段的映射
+	Col2Field map[string]*field // 列名到字段的映射
 }
 
 // Registry 注册中心，存储表信息
 type Registry struct {
 	lock   sync.RWMutex // 防止读写冲突
-	models map[reflect.Type]*tableModel
+	models map[reflect.Type]*TableModel
 }
 
-func (r *Registry) get(val any) (*tableModel, error) {
+func (r *Registry) Get(val any) (*TableModel, error) {
 	r.lock.RLock()
 	typ := reflect.TypeOf(val)
 	model, ok := r.models[typ]
@@ -42,7 +43,7 @@ func (r *Registry) get(val any) (*tableModel, error) {
 	return model, nil
 }
 
-func (r *Registry) parseModel(typ reflect.Type) (*tableModel, error) {
+func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 	for typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
@@ -62,19 +63,22 @@ func (r *Registry) parseModel(typ reflect.Type) (*tableModel, error) {
 			fieldMap中的key是title，若没配置orm则key是name
 		*/
 		tag := fd.Tag.Get("orm")
+		// 若不配置标签默认取typeName
 		if tag == "" {
 			tag = fdName
 		}
-		tag2Field[tag] = &field{
-			columnName: underscoreName(fdName),
+		field := &field{
+			ColumnName: underscoreName(fdName),
+			Typ:        fd.Type,
+			Offset:     fd.Offset,
 		}
-		col2Field[fdName] = &field{
-			columnName: underscoreName(fdName),
-		}
+		tag2Field[tag] = field
+		col2Field[fdName] = field
 	}
-	return &tableModel{
-		tableName: underscoreName(typ.Name()),
-		tag2Field: tag2Field,
+	return &TableModel{
+		TableName: underscoreName(typ.Name()),
+		Tag2Field: tag2Field,
+		Col2Field: col2Field,
 	}, nil
 }
 

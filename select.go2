@@ -12,7 +12,7 @@ type Selector[T any] struct {
 	table       string
 	where       []*Predicate
 	args        []any
-	tableModels *tableModel
+	tableModels *TableModel
 	db          *DB
 }
 
@@ -38,7 +38,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 		t   T
 		err error
 	)
-	s.tableModels, err = s.db.r.get(t)
+	s.tableModels, err = s.db.r.Get(t)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 	// 表名
 	if s.table == "" {
 		s.sb.WriteByte('`')
-		s.sb.WriteString(s.tableModels.tableName)
+		s.sb.WriteString(s.tableModels.TableName)
 		s.sb.WriteByte('`')
 	} else {
 		s.sb.WriteString(s.table)
@@ -76,11 +76,11 @@ func (s *Selector[T]) Build() (*Query, error) {
 func (s *Selector[T]) buildExpression(e Expression) error {
 	switch expr := e.(type) {
 	case *Column: // 列， eg：`Age`
-		if _, ok := s.tableModels.tag2Field[expr.name]; !ok {
+		if _, ok := s.tableModels.Tag2Field[expr.name]; !ok {
 			return errors.New("illegal field")
 		}
 		s.sb.WriteByte('`')
-		s.sb.WriteString(s.tableModels.tag2Field[expr.name].columnName)
+		s.sb.WriteString(s.tableModels.Tag2Field[expr.name].ColumnName)
 		s.sb.WriteByte('`')
 	case *Value: // 值，eg： 13
 		s.sb.WriteByte('?')
@@ -116,12 +116,12 @@ func (s *Selector[T]) buildExpression(e Expression) error {
 	return nil
 }
 
-func(s *Selector[T]) Get(ctx context.Context) (*T, error) {
+func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	query, err := s.Build()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.store.QueryContext(ctx, query.SQL, query.Args...)
+	rows, err := s.db.QueryContext(ctx, query.SQL, query.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,5 +130,11 @@ func(s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	}
 
 	tp := new(T)
-	s.tableModels
+	tableModel, err := s.db.r.Get(tp)
+	if err != nil {
+		return nil, err
+	}
+	val := s.db.unsafeCreator(tp, tableModel)
+	err = val.SetColumns(rows)
+	return tp, err
 }
