@@ -1,7 +1,6 @@
 package model
 
 import (
-	"database/sql"
 	"reflect"
 	"sync"
 )
@@ -19,7 +18,7 @@ type TestModel struct {
 	Id        int64
 	FirstName string
 	Age       int8
-	LastName  *sql.NullString
+	//LastName  *sql.NullString
 }
 
 // Expression 顶层抽象，接口的实现类有表达式、列、值。

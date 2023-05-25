@@ -2,6 +2,7 @@ package valuer
 
 import (
 	"database/sql"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/simple_orm/model"
 	"reflect"
 )
@@ -12,6 +13,9 @@ type ReflectValue struct {
 }
 
 func NewReflectValue(val any, meta *model.TableModel) Value {
+	if reflect.TypeOf(val).Kind() != reflect.Ptr || reflect.TypeOf(val).Elem().Kind() != reflect.Struct {
+		panic("val isn't struct ptr")
+	}
 	return ReflectValue{
 		val:  reflect.ValueOf(val).Elem(),
 		meta: meta,
@@ -44,9 +48,10 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 		colEleValues[i] = ptr.Elem()
 	}
 	// scan中传入的值是指针中存储的地址
-	if err = rows.Scan(colValues); err != nil {
+	if err = rows.Scan(colValues...); err != nil {
 		return err
 	}
+	spew.Println(r.meta.Col2Field)
 	for i, col := range cols {
 		field := r.meta.Col2Field[col]
 		fd := r.val.FieldByName(field.ColumnName)

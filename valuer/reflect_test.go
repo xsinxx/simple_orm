@@ -12,8 +12,8 @@ func Test_reflectValue_SetColumn(t *testing.T) {
 	testCases := []struct {
 		name    string
 		cs      map[string][]byte
-		val     *SimpleStruct
-		wantVal *SimpleStruct
+		val     *model.TestModel
+		wantVal *model.TestModel
 		wantErr error
 	}{
 		{
@@ -58,8 +58,8 @@ func Test_reflectValue_SetColumn(t *testing.T) {
 				"null_float64_ptr": []byte("6.4"),
 				"json_column":      []byte(`{"name": "Tom"}`),
 			},
-			val:     &SimpleStruct{},
-			wantVal: &SimpleStruct{1},
+			val:     &model.TestModel{},
+			wantVal: &model.TestModel{},
 		},
 		{
 			name: "invalid field",
@@ -68,20 +68,35 @@ func Test_reflectValue_SetColumn(t *testing.T) {
 			},
 			wantErr: ColumnsNotExists,
 		},
+		{
+			name: "normal deal result set",
+			cs: map[string][]byte{
+				"Id":        []byte("9426"),
+				"FirstName": []byte("zhu zhu"),
+				"Age":       []byte("66"),
+				//"LastName":  []byte("zhao"),
+			},
+			val: &model.TestModel{},
+			wantVal: &model.TestModel{
+				Id:        9426,
+				FirstName: "zhu zhu",
+				Age:       66,
+			},
+		},
 	}
 
 	r := model.NewRegistry()
-	meta, err := r.Get(&SimpleStruct{})
+	meta, err := r.Get(&model.TestModel{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			db, mock, err := sqlmock.New()
+			defer db.Close()
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer func() { _ = db.Close() }()
 			val := NewReflectValue(tc.val, meta)
 			cols := make([]string, 0, len(tc.cs))
 			colVals := make([]driver.Value, 0, len(tc.cs))
@@ -89,9 +104,9 @@ func Test_reflectValue_SetColumn(t *testing.T) {
 				cols = append(cols, k)
 				colVals = append(colVals, v)
 			}
+			// 当db.Query执行ExpectQuery中的语句时，返回结果是WillReturnRows中写入的结果
 			mock.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(colVals...))
 			rows, _ := db.Query("SELECT *")
-
 			rows.Next()
 			err = val.SetColumns(rows)
 			if err != nil {
