@@ -1,10 +1,12 @@
 package simple_orm
 
+import "github.com/simple_orm/model"
+
 // Predicate 表达式
 type Predicate struct {
-	left  Expression
-	right Expression
-	op    op
+	left  model.Expression
+	right model.Expression
+	op    model.op
 }
 
 func (p *Predicate) expr() {
@@ -14,7 +16,7 @@ func (p *Predicate) expr() {
 func (p *Predicate) And(right *Predicate) *Predicate {
 	return &Predicate{
 		left:  p,
-		op:    opAnd,
+		op:    model.opAnd,
 		right: right,
 	}
 }
@@ -22,14 +24,14 @@ func (p *Predicate) And(right *Predicate) *Predicate {
 func (p *Predicate) Or(right *Predicate) *Predicate {
 	return &Predicate{
 		left:  p,
-		op:    opOr,
+		op:    model.opOr,
 		right: right,
 	}
 }
 
 func Not(right *Predicate) *Predicate {
 	return &Predicate{
-		op:    opNot,
+		op:    model.opNot,
 		right: right,
 	}
 }

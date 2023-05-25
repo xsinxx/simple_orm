@@ -1,4 +1,4 @@
-package simple_orm
+package valuer
 
 import "errors"
 

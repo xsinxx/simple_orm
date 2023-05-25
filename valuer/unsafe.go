@@ -2,17 +2,17 @@ package valuer
 
 import (
 	"database/sql"
-	"github.com/simple_orm"
+	"github.com/simple_orm/model"
 	"reflect"
 	"unsafe"
 )
 
 type UnsafeValue struct {
 	address    unsafe.Pointer
-	tableModel *simple_orm.TableModel
+	tableModel *model.TableModel
 }
 
-func NewUnsafeValue(address any, meta *simple_orm.TableModel) Value {
+func NewUnsafeValue(address any, meta *model.TableModel) Value {
 	return UnsafeValue{
 		address:    unsafe.Pointer(reflect.ValueOf(address).Pointer()),
 		tableModel: meta,
@@ -25,13 +25,13 @@ func (u UnsafeValue) SetColumns(rows *sql.Rows) error {
 		return err
 	}
 	if len(columnsFromDB) != len(u.tableModel.Col2Field) {
-		return simple_orm.ColumnsNotMatch
+		return ColumnsNotMatch
 	}
 	colVal := make([]interface{}, 0, len(columnsFromDB))
 	for i, column := range columnsFromDB {
 		field, ok := u.tableModel.Col2Field[column]
 		if !ok {
-			return simple_orm.ColumnsNotExists
+			return ColumnsNotExists
 		}
 		ptr := unsafe.Pointer(uintptr(u.address) + field.Offset)
 		val := reflect.NewAt(field.Typ, ptr) // 将指针对应的地址写入值

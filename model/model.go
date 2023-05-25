@@ -1,6 +1,10 @@
-package simple_orm
+package model
 
-import "database/sql"
+import (
+	"database/sql"
+	"reflect"
+	"sync"
+)
 
 type Query struct {
 	SQL  string
@@ -34,3 +38,21 @@ const (
 	opGT  = ">"
 	opEQ  = "="
 )
+
+type Field struct {
+	ColumnName string // 对应的数据库中表的列
+	Typ        reflect.Type
+	Offset     uintptr
+}
+
+type TableModel struct {
+	TableName string            // 表名
+	Tag2Field map[string]*Field // 标签名到字段的映射
+	Col2Field map[string]*Field // 列名到字段的映射
+}
+
+// Registry 注册中心，存储表信息
+type Registry struct {
+	lock        sync.RWMutex // 防止读写冲突
+	TableModels map[reflect.Type]*TableModel
+}

@@ -2,17 +2,16 @@ package valuer
 
 import (
 	"database/sql"
-	"github.com/simple_orm"
+	"github.com/simple_orm/model"
 	"reflect"
 )
 
 type ReflectValue struct {
 	val  reflect.Value
-	meta *simple_orm.TableModel
+	meta *model.TableModel
 }
 
-func NewReflectValue(val any, meta *simple_orm.TableModel) Value {
-	//
+func NewReflectValue(val any, meta *model.TableModel) Value {
 	return ReflectValue{
 		val:  reflect.ValueOf(val).Elem(),
 		meta: meta,
@@ -20,7 +19,7 @@ func NewReflectValue(val any, meta *simple_orm.TableModel) Value {
 }
 
 // SetColumns
-// r.val 中是结构体指针指向的结构体，目标是将该结构体中的字段set数据库中读取出的值
+//  r.val只能是结构体指针，目标是将该结构体中的字段set数据库中读取出的值
 //  ==> set的数据只能是reflect.Value类型，因此需要从rows中读取出reflect.Value
 //  ==> rows.Scan只能接收[]interface{}，这个[]interface{}是指针数组
 //  ==> 由于是reflect.New返回结果是指针，在调用scan时会同时更新colValues & colEleValues
@@ -31,14 +30,14 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 		return err
 	}
 	if len(cols) != len(r.meta.Col2Field) {
-		return simple_orm.ColumnsNotMatch
+		return ColumnsNotMatch
 	}
 	colValues := make([]interface{}, len(cols))
 	colEleValues := make([]reflect.Value, len(cols))
 	for i, col := range cols {
 		field, ok := r.meta.Col2Field[col]
 		if !ok {
-			return simple_orm.ColumnsNotExists
+			return ColumnsNotExists
 		}
 		ptr := reflect.New(field.Typ)  // new一个空指针
 		colValues[i] = ptr.Interface() // 指针中存储的是地址，通过Interface()取的是地址

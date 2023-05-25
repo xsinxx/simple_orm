@@ -3,6 +3,7 @@ package simple_orm
 import (
 	"context"
 	"errors"
+	"github.com/simple_orm/model"
 	"strings"
 )
 
@@ -33,7 +34,7 @@ func (s *Selector[T]) Where(where ...*Predicate) *Selector[T] {
 	return s
 }
 
-func (s *Selector[T]) Build() (*Query, error) {
+func (s *Selector[T]) Build() (*model.Query, error) {
 	var (
 		t   T
 		err error
@@ -65,7 +66,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 	}
 
 	s.sb.WriteString(";")
-	return &Query{
+	return &model.Query{
 		SQL:  s.sb.String(),
 		Args: s.args,
 	}, nil
@@ -73,7 +74,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 
 // 递归解析表达式
 // (`Age` > 13) AND (`Age` < 24)
-func (s *Selector[T]) buildExpression(e Expression) error {
+func (s *Selector[T]) buildExpression(e model.Expression) error {
 	switch expr := e.(type) {
 	case *Column: // 列， eg：`Age`
 		if _, ok := s.tableModels.Tag2Field[expr.name]; !ok {
@@ -134,7 +135,7 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	val := s.db.unsafeCreator(tp, tableModel)
+	val := s.db.creator(tp, tableModel)
 	err = val.SetColumns(rows)
 	return tp, err
 }

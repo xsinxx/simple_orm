@@ -2,6 +2,7 @@ package simple_orm
 
 import (
 	"database/sql"
+	"github.com/simple_orm/model"
 	"github.com/simple_orm/valuer"
 	"reflect"
 )
@@ -9,17 +10,18 @@ import (
 type DBOption func(db *DB)
 
 type DB struct {
-	*sql.DB       // 对应具体数据库的存储, 继承
-	r             *Registry
-	unsafeCreator valuer.Creator // 运行时再执行的函数
+	store   *sql.DB // 对应具体数据库的存储, 继承
+	r       *model.Registry
+	creator valuer.Creator // 运行时再执行的函数，默认unsafe
 }
 
 func OpenDB(store *sql.DB, opts ...DBOption) (*DB, error) {
 	db := &DB{
-		r: &Registry{
-			models: map[reflect.Type]*TableModel{},
+		store: store,
+		r: &model.Registry{
+			TableModels: map[reflect.Type]*model.TableModel{},
 		},
-		unsafeCreator: valuer.NewUnsafeValue,
+		creator: valuer.NewUnsafeValue,
 	}
 	for _, opt := range opts {
 		opt(db)
@@ -27,14 +29,15 @@ func OpenDB(store *sql.DB, opts ...DBOption) (*DB, error) {
 	return db, nil
 }
 
-func DBWithRegister(r *Registry) DBOption {
+func DBWithRegister(r *model.Registry) DBOption {
 	return func(db *DB) {
 		db.r = r
 	}
 }
 
-func DBWithUnsafeCreator(unsafeCreator valuer.Creator) DBOption {
+// DBWithCreator 提供了unsafe & reflect 两种方式将sql中读取的数据放入到结构体指针中
+func DBWithCreator(reflectCreator valuer.Creator) DBOption {
 	return func(db *DB) {
-		db.unsafeCreator = unsafeCreator
+		db.creator = reflectCreator
 	}
 }

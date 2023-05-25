@@ -1,46 +1,33 @@
-package simple_orm
+package model
 
 import (
 	"errors"
 	"reflect"
-	"sync"
 	"unicode"
 )
 
-type field struct {
-	ColumnName string // 对应的数据库中表的列
-	Typ        reflect.Type
-	Offset     uintptr
-}
-
-type TableModel struct {
-	TableName string            // 表名
-	Tag2Field map[string]*field // 标签名到字段的映射
-	Col2Field map[string]*field // 列名到字段的映射
-}
-
-// Registry 注册中心，存储表信息
-type Registry struct {
-	lock   sync.RWMutex // 防止读写冲突
-	models map[reflect.Type]*TableModel
+func NewRegistry() *Registry {
+	return &Registry{
+		TableModels: map[reflect.Type]*TableModel{},
+	}
 }
 
 func (r *Registry) Get(val any) (*TableModel, error) {
 	r.lock.RLock()
 	typ := reflect.TypeOf(val)
-	model, ok := r.models[typ]
+	tableModel, ok := r.TableModels[typ]
 	r.lock.RUnlock()
 	if ok {
-		return model, nil
+		return tableModel, nil
 	}
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	model, err := r.parseModel(typ)
+	tableModel, err := r.parseModel(typ)
 	if err != nil {
 		return nil, err
 	}
-	r.models[typ] = model
-	return model, nil
+	r.TableModels[typ] = tableModel
+	return tableModel, nil
 }
 
 func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
@@ -50,8 +37,8 @@ func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 	if typ.Kind() != reflect.Struct {
 		return nil, errors.New("type is wrong")
 	}
-	tag2Field := map[string]*field{}
-	col2Field := map[string]*field{}
+	tag2Field := map[string]*Field{}
+	col2Field := map[string]*Field{}
 	for i := 0; i < typ.NumField(); i++ {
 		fd := typ.Field(i)
 		fdName := fd.Name
@@ -67,7 +54,7 @@ func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 		if tag == "" {
 			tag = fdName
 		}
-		field := &field{
+		field := &Field{
 			ColumnName: underscoreName(fdName),
 			Typ:        fd.Type,
 			Offset:     fd.Offset,
