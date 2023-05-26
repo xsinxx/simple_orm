@@ -41,6 +41,7 @@ const (
 type Field struct {
 	ColumnName string // 对应的数据库中表的列
 	Typ        reflect.Type
+	TypName    string
 	Offset     uintptr
 }
 

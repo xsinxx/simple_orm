@@ -57,6 +57,7 @@ func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 		field := &Field{
 			ColumnName: underscoreName(fdName),
 			Typ:        fd.Type,
+			TypName:    fd.Name,
 			Offset:     fd.Offset,
 		}
 		tag2Field[tag] = field

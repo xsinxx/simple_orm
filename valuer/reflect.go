@@ -2,7 +2,6 @@ package valuer
 
 import (
 	"database/sql"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/simple_orm/model"
 	"reflect"
 )
@@ -51,10 +50,9 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 	if err = rows.Scan(colValues...); err != nil {
 		return err
 	}
-	spew.Println(r.meta.Col2Field)
 	for i, col := range cols {
 		field := r.meta.Col2Field[col]
-		fd := r.val.FieldByName(field.ColumnName)
+		fd := r.val.FieldByName(field.TypName)
 		fd.Set(colEleValues[i])
 	}
 	return nil

@@ -1,7 +1,6 @@
 package model
 
 import (
-	"database/sql"
 	"errors"
 	"github.com/stretchr/testify/assert"
 	"reflect"
@@ -25,44 +24,40 @@ func TestRegistry_Get(t *testing.T) {
 					"Id": {
 						ColumnName: "id",
 						Typ:        reflect.TypeOf(int64(0)),
+						TypName:    "Id",
 						Offset:     0,
 					},
 					"FirstName": {
 						ColumnName: "first_name",
 						Typ:        reflect.TypeOf(""),
+						TypName:    "FirstName",
 						Offset:     8,
 					},
 					"Age": {
 						ColumnName: "age",
 						Typ:        reflect.TypeOf(int8(0)),
+						TypName:    "Age",
 						Offset:     24,
-					},
-					"LastName": {
-						ColumnName: "last_name",
-						Typ:        reflect.TypeOf(&sql.NullString{}),
-						Offset:     32,
 					},
 				},
 				Tag2Field: map[string]*Field{
 					"Id": {
 						ColumnName: "id",
 						Typ:        reflect.TypeOf(int64(0)),
+						TypName:    "Id",
 						Offset:     0,
 					},
 					"FirstName": {
 						ColumnName: "first_name",
 						Typ:        reflect.TypeOf(""),
+						TypName:    "FirstName",
 						Offset:     8,
 					},
 					"Age": {
 						ColumnName: "age",
 						Typ:        reflect.TypeOf(int8(0)),
+						TypName:    "Age",
 						Offset:     24,
-					},
-					"LastName": {
-						ColumnName: "last_name",
-						Typ:        reflect.TypeOf(&sql.NullString{}),
-						Offset:     32,
 					},
 				},
 			},
@@ -80,44 +75,40 @@ func TestRegistry_Get(t *testing.T) {
 					"Id": {
 						ColumnName: "id",
 						Typ:        reflect.TypeOf(int64(0)),
+						TypName:    "Id",
 						Offset:     0,
 					},
 					"FirstName": {
 						ColumnName: "first_name",
 						Typ:        reflect.TypeOf(""),
+						TypName:    "FirstName",
 						Offset:     8,
 					},
 					"Age": {
 						ColumnName: "age",
 						Typ:        reflect.TypeOf(int8(0)),
+						TypName:    "Age",
 						Offset:     24,
-					},
-					"LastName": {
-						ColumnName: "last_name",
-						Typ:        reflect.TypeOf(&sql.NullString{}),
-						Offset:     32,
 					},
 				},
 				Tag2Field: map[string]*Field{
 					"Id": {
 						ColumnName: "id",
 						Typ:        reflect.TypeOf(int64(0)),
+						TypName:    "Id",
 						Offset:     0,
 					},
 					"FirstName": {
 						ColumnName: "first_name",
 						Typ:        reflect.TypeOf(""),
+						TypName:    "FirstName",
 						Offset:     8,
 					},
 					"Age": {
 						ColumnName: "age",
 						Typ:        reflect.TypeOf(int8(0)),
+						TypName:    "Age",
 						Offset:     24,
-					},
-					"LastName": {
-						ColumnName: "last_name",
-						Typ:        reflect.TypeOf(&sql.NullString{}),
-						Offset:     32,
 					},
 				},
 			},
@@ -141,6 +132,7 @@ func TestRegistry_Get(t *testing.T) {
 					"identity": {
 						ColumnName: "level",
 						Typ:        reflect.TypeOf(int64(0)),
+						TypName:    "Level",
 						Offset:     0,
 					},
 				},
@@ -148,6 +140,7 @@ func TestRegistry_Get(t *testing.T) {
 					"Level": {
 						ColumnName: "level",
 						Typ:        reflect.TypeOf(int64(0)),
+						TypName:    "Level",
 						Offset:     0,
 					},
 				},
