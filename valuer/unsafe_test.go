@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func Test_reflectValue_SetColumn(t *testing.T) {
+func Test_unsafeValue_SetColumn(t *testing.T) {
 	testCases := []struct {
 		name    string
 		cs      map[string][]byte
@@ -61,7 +61,7 @@ func Test_reflectValue_SetColumn(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			val := NewReflectValue(tc.val, meta)
+			val := NewUnsafeValue(tc.val, meta)
 			cols := make([]string, 0, len(tc.cs))
 			colVals := make([]driver.Value, 0, len(tc.cs))
 			for k, v := range tc.cs {

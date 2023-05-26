@@ -32,7 +32,8 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 	if err != nil {
 		return err
 	}
-	if len(cols) != len(r.meta.Col2Field) {
+	// 数据库中字段不能出现model中未定义字段
+	if len(cols) > len(r.meta.Col2Field) {
 		return ColumnsNotMatch
 	}
 	colValues := make([]interface{}, len(cols))
@@ -51,7 +52,10 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 		return err
 	}
 	for i, col := range cols {
-		field := r.meta.Col2Field[col]
+		field, ok := r.meta.Col2Field[col]
+		if !ok {
+			return ColumnsNotExists
+		}
 		fd := r.val.FieldByName(field.TypName)
 		fd.Set(colEleValues[i])
 	}

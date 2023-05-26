@@ -24,10 +24,10 @@ func (u UnsafeValue) SetColumns(rows *sql.Rows) error {
 	if err != nil {
 		return err
 	}
-	if len(columnsFromDB) != len(u.tableModel.Col2Field) {
+	if len(columnsFromDB) > len(u.tableModel.Col2Field) {
 		return ColumnsNotMatch
 	}
-	colVal := make([]interface{}, 0, len(columnsFromDB))
+	colVal := make([]interface{}, len(columnsFromDB))
 	for i, column := range columnsFromDB {
 		field, ok := u.tableModel.Col2Field[column]
 		if !ok {
@@ -37,5 +37,5 @@ func (u UnsafeValue) SetColumns(rows *sql.Rows) error {
 		val := reflect.NewAt(field.Typ, ptr) // 将指针对应的地址写入值
 		colVal[i] = val.Interface()
 	}
-	return rows.Scan(colVal)
+	return rows.Scan(colVal...)
 }
