@@ -15,6 +15,14 @@ type DB struct {
 	creator valuer.Creator // 运行时再执行的函数，默认unsafe
 }
 
+func Open(driver string, dsn string, opts ...DBOption) (*DB, error) {
+	db, err := sql.Open(driver, dsn)
+	if err != nil {
+		return nil, err
+	}
+	return OpenDB(db, opts...)
+}
+
 func OpenDB(store *sql.DB, opts ...DBOption) (*DB, error) {
 	db := &DB{
 		store: store,

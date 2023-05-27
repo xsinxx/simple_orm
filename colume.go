@@ -18,9 +18,9 @@ func NewColumn(name string) *Column {
 }
 
 // 列的右侧可能是表达式
-func exprOf(e any) model.Expression {
+func exprOf(e any) Expression {
 	switch exp := e.(type) {
-	case model.Expression:
+	case Expression:
 		return exp
 	default:
 		return NewValue(exp)
@@ -31,7 +31,7 @@ func (c *Column) LT(val any) *Predicate {
 	return &Predicate{
 		left:  c,
 		right: exprOf(val),
-		op:    model.opLT,
+		op:    model.OpLT,
 	}
 }
 
@@ -39,7 +39,7 @@ func (c *Column) EQ(val any) *Predicate {
 	return &Predicate{
 		left:  c,
 		right: exprOf(val),
-		op:    model.opEQ,
+		op:    model.OpEQ,
 	}
 }
 
@@ -47,6 +47,6 @@ func (c *Column) GT(val any) *Predicate {
 	return &Predicate{
 		left:  c,
 		right: exprOf(val),
-		op:    model.opGT,
+		op:    model.OpGT,
 	}
 }

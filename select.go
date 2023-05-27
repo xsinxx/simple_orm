@@ -11,9 +11,10 @@ import (
 type Selector[T any] struct {
 	sb          strings.Builder
 	table       string
+	groupBy     []*Column
 	where       []*Predicate
 	args        []any
-	tableModels *TableModel
+	tableModels *model.TableModel
 	db          *DB
 }
 
@@ -34,7 +35,12 @@ func (s *Selector[T]) Where(where ...*Predicate) *Selector[T] {
 	return s
 }
 
-func (s *Selector[T]) Build() (*model.Query, error) {
+func (s *Selector[T]) GroupBy(columns ...*Column) *Selector[T] {
+	s.groupBy = columns
+	return s
+}
+
+func (s *Selector[T]) Build() (*Query, error) {
 	var (
 		t   T
 		err error
@@ -59,14 +65,26 @@ func (s *Selector[T]) Build() (*model.Query, error) {
 		for i := 1; i < len(s.where); i++ {
 			p = p.And(s.where[i])
 		}
-		err := s.buildExpression(p)
+		err = s.buildExpression(p)
 		if err != nil {
 			return nil, err
 		}
 	}
-
+	// group by
+	if len(s.groupBy) > 0 {
+		s.sb.WriteString(" GROUP BY ")
+		for i, v := range s.groupBy {
+			err = s.buildExpression(v)
+			if err != nil {
+				return nil, err
+			}
+			if i != len(s.groupBy)-1 {
+				s.sb.WriteString(",")
+			}
+		}
+	}
 	s.sb.WriteString(";")
-	return &model.Query{
+	return &Query{
 		SQL:  s.sb.String(),
 		Args: s.args,
 	}, nil
@@ -74,14 +92,14 @@ func (s *Selector[T]) Build() (*model.Query, error) {
 
 // 递归解析表达式
 // (`Age` > 13) AND (`Age` < 24)
-func (s *Selector[T]) buildExpression(e model.Expression) error {
+func (s *Selector[T]) buildExpression(e Expression) error {
 	switch expr := e.(type) {
 	case *Column: // 列， eg：`Age`
-		if _, ok := s.tableModels.Tag2Field[expr.name]; !ok {
+		if _, ok := s.tableModels.Col2Field[expr.name]; !ok {
 			return errors.New("illegal field")
 		}
 		s.sb.WriteByte('`')
-		s.sb.WriteString(s.tableModels.Tag2Field[expr.name].ColumnName)
+		s.sb.WriteString(s.tableModels.Col2Field[expr.name].ColumnName)
 		s.sb.WriteByte('`')
 	case *Value: // 值，eg： 13
 		s.sb.WriteByte('?')
@@ -122,7 +140,7 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.QueryContext(ctx, query.SQL, query.Args...)
+	rows, err := s.db.store.QueryContext(ctx, query.SQL, query.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -138,4 +156,30 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	val := s.db.creator(tp, tableModel)
 	err = val.SetColumns(rows)
 	return tp, err
+}
+
+func (s *Selector[T]) GetMul(ctx context.Context) ([]*T, error) {
+	query, err := s.Build()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.db.store.QueryContext(ctx, query.SQL, query.Args...)
+	if err != nil {
+		return nil, err
+	}
+	tpArr := make([]*T, 0)
+	for rows.Next() {
+		tp := new(T)
+		tableModel, err := s.db.r.Get(tp)
+		if err != nil {
+			return nil, err
+		}
+		val := s.db.creator(tp, tableModel)
+		err = val.SetColumns(rows)
+		if err != nil {
+			return nil, err
+		}
+		tpArr = append(tpArr, tp)
+	}
+	return tpArr, err
 }

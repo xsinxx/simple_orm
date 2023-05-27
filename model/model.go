@@ -5,14 +5,14 @@ import (
 	"sync"
 )
 
-type Query struct {
-	SQL  string
-	Args []any
-}
-
-type QueryBuilder interface {
-	Build() (*Query, error)
-}
+//type Query struct {
+//	SQL  string
+//	Args []any
+//}
+//
+//type QueryBuilder interface {
+//	Build() (*Query, error)
+//}
 
 type TestModel struct {
 	Id        int64
@@ -21,21 +21,15 @@ type TestModel struct {
 	//LastName  *sql.NullString
 }
 
-// Expression 顶层抽象，接口的实现类有表达式、列、值。
-// eg：(`Age` > 13) AND (`Age` < 24)，(`Age` > 13)是表达式、Age是列、13填写的是值
-type Expression interface {
-	expr()
-}
-
-type op string
+type Op string
 
 const (
-	opAnd = "AND"
-	opOr  = "OR"
-	opNot = "NOT"
-	opLT  = "<"
-	opGT  = ">"
-	opEQ  = "="
+	OpAnd = "AND"
+	OpOr  = "OR"
+	OpNot = "NOT"
+	OpLT  = "<"
+	OpGT  = ">"
+	OpEQ  = "="
 )
 
 type Field struct {

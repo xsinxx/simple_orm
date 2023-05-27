@@ -2,56 +2,66 @@ package simple_orm
 
 import (
 	"errors"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/simple_orm/model"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
+// memoryDB4UnitTest 返回一个基于内存的 ORM，它使用的是 sqlite3 内存模式。
+func memoryDB4UnitTest(t *testing.T) *DB {
+	orm, err := Open("sqlite3", "file:test.db?cache=shared&mode=memory")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return orm
+}
+
 func TestSelector_Build(t *testing.T) {
 	testCases := []struct {
 		name      string
-		q         model.QueryBuilder
-		wantQuery *model.Query
+		q         QueryBuilder
+		wantQuery *Query
 		wantErr   error
 	}{
 		{
 			// From 都不调用
 			name: "no from",
-			q:    NewSelector[model.TestModel](MustNewDB()),
-			wantQuery: &model.Query{
+			q:    NewSelector[model.TestModel](memoryDB4UnitTest(t)),
+			wantQuery: &Query{
 				SQL: "SELECT * FROM `test_model`;",
 			},
 		},
 		{
 			// 调用 FROM
 			name: "with from",
-			q:    NewSelector[model.TestModel](MustNewDB()).From("`test_model_t`"),
-			wantQuery: &model.Query{
+			q:    NewSelector[model.TestModel](memoryDB4UnitTest(t)).From("`test_model_t`"),
+			wantQuery: &Query{
 				SQL: "SELECT * FROM `test_model_t`;",
 			},
 		},
 		{
 			// 调用 FROM，但是传入空字符串
 			name: "empty from",
-			q:    NewSelector[model.TestModel](MustNewDB()).From(""),
-			wantQuery: &model.Query{
+			q:    NewSelector[model.TestModel](memoryDB4UnitTest(t)).From(""),
+			wantQuery: &Query{
 				SQL: "SELECT * FROM `test_model`;",
 			},
 		},
 		{
 			// 调用 FROM，同时出入看了 DB
 			name: "with db",
-			q:    NewSelector[model.TestModel](MustNewDB()).From("`test_db`.`test_model`"),
-			wantQuery: &model.Query{
+			q:    NewSelector[model.TestModel](memoryDB4UnitTest(t)).From("`test_db`.`test_model`"),
+			wantQuery: &Query{
 				SQL: "SELECT * FROM `test_db`.`test_model`;",
 			},
 		},
 		{
 			// 单一简单条件
 			name: "single and simple predicate",
-			q: NewSelector[model.TestModel](MustNewDB()).From("`test_model_t`").
+			q: NewSelector[model.TestModel](memoryDB4UnitTest(t)).From("`test_model_t`").
 				Where(NewColumn("Id").EQ(1)),
-			wantQuery: &model.Query{
+			wantQuery: &Query{
 				SQL:  "SELECT * FROM `test_model_t` WHERE `id` = ?;",
 				Args: []any{1},
 			},
@@ -59,9 +69,9 @@ func TestSelector_Build(t *testing.T) {
 		{
 			// 多个 predicate
 			name: "multiple predicates",
-			q: NewSelector[model.TestModel](MustNewDB()).
+			q: NewSelector[model.TestModel](memoryDB4UnitTest(t)).
 				Where(NewColumn("Age").GT(18), NewColumn("Age").LT(35)),
-			wantQuery: &model.Query{
+			wantQuery: &Query{
 				SQL:  "SELECT * FROM `test_model` WHERE (`age` > ?) AND (`age` < ?);",
 				Args: []any{18, 35},
 			},
@@ -69,9 +79,9 @@ func TestSelector_Build(t *testing.T) {
 		{
 			// 使用 AND
 			name: "and",
-			q: NewSelector[model.TestModel](MustNewDB()).
+			q: NewSelector[model.TestModel](memoryDB4UnitTest(t)).
 				Where(NewColumn("Age").GT(18).And(NewColumn("Age").LT(35))),
-			wantQuery: &model.Query{
+			wantQuery: &Query{
 				SQL:  "SELECT * FROM `test_model` WHERE (`age` > ?) AND (`age` < ?);",
 				Args: []any{18, 35},
 			},
@@ -79,9 +89,9 @@ func TestSelector_Build(t *testing.T) {
 		{
 			// 使用 OR
 			name: "or",
-			q: NewSelector[model.TestModel](MustNewDB()).
+			q: NewSelector[model.TestModel](memoryDB4UnitTest(t)).
 				Where(NewColumn("Age").GT(18).Or(NewColumn("Age").LT(35))),
-			wantQuery: &model.Query{
+			wantQuery: &Query{
 				SQL:  "SELECT * FROM `test_model` WHERE (`age` > ?) OR (`age` < ?);",
 				Args: []any{18, 35},
 			},
@@ -89,8 +99,8 @@ func TestSelector_Build(t *testing.T) {
 		{
 			// 使用 NOT
 			name: "not",
-			q:    NewSelector[model.TestModel](MustNewDB()).Where(Not(NewColumn("Age").GT(18))),
-			wantQuery: &model.Query{
+			q:    NewSelector[model.TestModel](memoryDB4UnitTest(t)).Where(Not(NewColumn("Age").GT(18))),
+			wantQuery: &Query{
 				// NOT 前面有两个空格，因为我们没有对 NOT 进行特殊处理
 				SQL:  "SELECT * FROM `test_model` WHERE  NOT (`age` > ?);",
 				Args: []any{18},
@@ -99,11 +109,62 @@ func TestSelector_Build(t *testing.T) {
 		{
 			// 非法列
 			name:    "invalid column",
-			q:       NewSelector[model.TestModel](MustNewDB()).Where(Not(NewColumn("Invalid").GT(18))),
+			q:       NewSelector[model.TestModel](memoryDB4UnitTest(t)).Where(Not(NewColumn("Invalid").GT(18))),
 			wantErr: errors.New("illegal field"),
 		},
 	}
 
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			query, err := tc.q.Build()
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantQuery, query)
+		})
+	}
+}
+
+func TestSelector_GroupBy(t *testing.T) {
+	db := memoryDB4UnitTest(t)
+	testCases := []struct {
+		name      string
+		q         QueryBuilder
+		wantQuery *Query
+		wantErr   error
+	}{
+		{
+			// 调用了，但是啥也没传
+			name: "none",
+			q:    NewSelector[model.TestModel](db).GroupBy(),
+			wantQuery: &Query{
+				SQL: "SELECT * FROM `test_model`;",
+			},
+		},
+		{
+			// 单个
+			name: "single",
+			q:    NewSelector[model.TestModel](db).GroupBy(NewColumn("Age")),
+			wantQuery: &Query{
+				SQL: "SELECT * FROM `test_model` GROUP BY `age`;",
+			},
+		},
+		{
+			// 多个
+			name: "multiple",
+			q:    NewSelector[model.TestModel](db).GroupBy(NewColumn("Age"), NewColumn("FirstName")),
+			wantQuery: &Query{
+				SQL: "SELECT * FROM `test_model` GROUP BY `age`,`first_name`;",
+			},
+		},
+		{
+			// 不存在
+			name:    "invalid column",
+			q:       NewSelector[model.TestModel](db).GroupBy(NewColumn("Invalid")),
+			wantErr: errors.New("illegal field"),
+		},
+	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query, err := tc.q.Build()
