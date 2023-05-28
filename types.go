@@ -29,3 +29,10 @@ const (
 	AggregateFunctionSum = "SUM"
 	AggregateFunctionAVG = "AVG"
 )
+
+type Order string
+
+const (
+	ASCOrder  = "ASC"
+	DESCOrder = "DESC"
+)

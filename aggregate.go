@@ -19,6 +19,20 @@ func NewAggregate(name string, aggregateFunction AggregateFunction) *Aggregate {
 	}
 }
 
+func Avg(column string) *Aggregate {
+	return &Aggregate{
+		aggregateFunction: AggregateFunctionAVG,
+		name:              column,
+	}
+}
+
+func Sum(column string) *Aggregate {
+	return &Aggregate{
+		aggregateFunction: AggregateFunctionSum,
+		name:              column,
+	}
+}
+
 func (a *Aggregate) LT(val any) *Predicate {
 	return &Predicate{
 		left:  a,

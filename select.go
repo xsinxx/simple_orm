@@ -14,6 +14,7 @@ type Selector[T any] struct {
 	groupBy     []*Column
 	having      *Predicate
 	where       []*Predicate
+	orderBy     []*OrderBy
 	args        []any
 	tableModels *model.TableModel
 	db          *DB
@@ -43,6 +44,11 @@ func (s *Selector[T]) GroupBy(columns ...*Column) *Selector[T] {
 
 func (s *Selector[T]) Having(having *Predicate) *Selector[T] {
 	s.having = having
+	return s
+}
+
+func (s *Selector[T]) OrderBy(columns ...*OrderBy) *Selector[T] {
+	s.orderBy = columns
 	return s
 }
 
@@ -101,6 +107,22 @@ func (s *Selector[T]) Build() (*Query, error) {
 		err = s.buildExpression(s.having)
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// order by
+	if len(s.orderBy) > 0 {
+		s.sb.WriteString(" ORDER BY ")
+		for i, v := range s.orderBy {
+			field, ok := s.tableModels.Col2Field[v.name]
+			if !ok {
+				return nil, errors.New("illegal field")
+			}
+			s.sb.WriteString("`" + field.ColumnName + "` ")
+			s.sb.WriteString(string(v.order))
+			if i != len(s.orderBy)-1 {
+				s.sb.WriteString(",")
+			}
 		}
 	}
 	s.sb.WriteString(";")

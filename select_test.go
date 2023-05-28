@@ -216,14 +216,54 @@ func TestSelector_Having(t *testing.T) {
 		{
 			// 聚合函数
 			name: "avg",
-			q: NewSelector[model.TestModel](db).GroupBy(NewColumn("Age")).
-				Having(NewAggregate("Age", AggregateFunctionAVG).EQ(18)),
+			q:    NewSelector[model.TestModel](db).GroupBy(NewColumn("Age")).Having(Avg("Age").EQ(18)),
 			wantQuery: &Query{
 				SQL:  "SELECT * FROM `test_model` GROUP BY `age` HAVING AVG(`age`) = ?;",
 				Args: []any{18},
 			},
 		},
 	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			query, err := tc.q.Build()
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantQuery, query)
+		})
+	}
+}
+
+func TestSelector_OrderBy(t *testing.T) {
+	db := memoryDB4UnitTest(t)
+	testCases := []struct {
+		name      string
+		q         QueryBuilder
+		wantQuery *Query
+		wantErr   error
+	}{
+		{
+			name: "column",
+			q:    NewSelector[model.TestModel](db).OrderBy(Asc("Age")),
+			wantQuery: &Query{
+				SQL: "SELECT * FROM `test_model` ORDER BY `age` ASC;",
+			},
+		},
+		{
+			name: "columns",
+			q:    NewSelector[model.TestModel](db).OrderBy(Asc("Age"), Desc("Id")),
+			wantQuery: &Query{
+				SQL: "SELECT * FROM `test_model` ORDER BY `age` ASC,`id` DESC;",
+			},
+		},
+		{
+			name:    "invalid column",
+			q:       NewSelector[model.TestModel](db).OrderBy(Asc("Invalid")),
+			wantErr: errors.New("illegal field"),
+		},
+	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query, err := tc.q.Build()
