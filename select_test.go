@@ -275,3 +275,49 @@ func TestSelector_OrderBy(t *testing.T) {
 		})
 	}
 }
+
+func TestSelector_OffsetLimit(t *testing.T) {
+	db := memoryDB4UnitTest(t)
+	testCases := []struct {
+		name      string
+		q         QueryBuilder
+		wantQuery *Query
+		wantErr   error
+	}{
+		{
+			name: "offset only",
+			q:    NewSelector[model.TestModel](db).Offset(10),
+			wantQuery: &Query{
+				SQL:  "SELECT * FROM `test_model` OFFSET ?;",
+				Args: []any{10},
+			},
+		},
+		{
+			name: "limit only",
+			q:    NewSelector[model.TestModel](db).Limit(10),
+			wantQuery: &Query{
+				SQL:  "SELECT * FROM `test_model` LIMIT ?;",
+				Args: []any{10},
+			},
+		},
+		{
+			name: "limit offset",
+			q:    NewSelector[model.TestModel](db).Limit(20).Offset(10),
+			wantQuery: &Query{
+				SQL:  "SELECT * FROM `test_model` LIMIT ? OFFSET ?;",
+				Args: []any{20, 10},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			query, err := tc.q.Build()
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantQuery, query)
+		})
+	}
+}

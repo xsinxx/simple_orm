@@ -11,10 +11,12 @@ import (
 type Selector[T any] struct {
 	sb          strings.Builder
 	table       string
+	where       []*Predicate
 	groupBy     []*Column
 	having      *Predicate
-	where       []*Predicate
 	orderBy     []*OrderBy
+	limit       int
+	offset      int
 	args        []any
 	tableModels *model.TableModel
 	db          *DB
@@ -49,6 +51,16 @@ func (s *Selector[T]) Having(having *Predicate) *Selector[T] {
 
 func (s *Selector[T]) OrderBy(columns ...*OrderBy) *Selector[T] {
 	s.orderBy = columns
+	return s
+}
+
+func (s *Selector[T]) Limit(limit int) *Selector[T] {
+	s.limit = limit
+	return s
+}
+
+func (s *Selector[T]) Offset(offset int) *Selector[T] {
+	s.offset = offset
 	return s
 }
 
@@ -124,6 +136,18 @@ func (s *Selector[T]) Build() (*Query, error) {
 				s.sb.WriteString(",")
 			}
 		}
+	}
+
+	// limit
+	if s.limit != 0 {
+		s.sb.WriteString(" LIMIT ?")
+		s.args = append(s.args, s.limit)
+	}
+
+	// offset
+	if s.offset != 0 {
+		s.sb.WriteString(" OFFSET ?")
+		s.args = append(s.args, s.offset)
 	}
 	s.sb.WriteString(";")
 	return &Query{
