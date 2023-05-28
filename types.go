@@ -22,3 +22,10 @@ type Query struct {
 type QueryBuilder interface {
 	Build() (*Query, error)
 }
+
+type AggregateFunction string
+
+const (
+	AggregateFunctionSum = "SUM"
+	AggregateFunctionAVG = "AVG"
+)

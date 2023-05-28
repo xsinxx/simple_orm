@@ -1,6 +1,8 @@
 package simple_orm
 
-import "github.com/simple_orm/model"
+import (
+	"github.com/simple_orm/model"
+)
 
 // Column 列名
 type Column struct {

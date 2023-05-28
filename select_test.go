@@ -176,3 +176,62 @@ func TestSelector_GroupBy(t *testing.T) {
 		})
 	}
 }
+
+func TestSelector_Having(t *testing.T) {
+	db := memoryDB4UnitTest(t)
+	testCases := []struct {
+		name      string
+		q         QueryBuilder
+		wantQuery *Query
+		wantErr   error
+	}{
+		{
+			// 调用了，但是啥也没传
+			name: "none",
+			q:    NewSelector[model.TestModel](db).GroupBy(NewColumn("Age")),
+			wantQuery: &Query{
+				SQL: "SELECT * FROM `test_model` GROUP BY `age`;",
+			},
+		},
+		{
+			// 单个条件
+			name: "single",
+			q: NewSelector[model.TestModel](db).GroupBy(NewColumn("Age")).
+				Having(NewColumn("FirstName").EQ("Deng")),
+			wantQuery: &Query{
+				SQL:  "SELECT * FROM `test_model` GROUP BY `age` HAVING `first_name` = ?;",
+				Args: []any{"Deng"},
+			},
+		},
+		{
+			// 多个条件
+			name: "multiple",
+			q: NewSelector[model.TestModel](db).GroupBy(NewColumn("Age")).
+				Having(NewColumn("FirstName").EQ("Hao").And(NewColumn("Age").EQ("3"))),
+			wantQuery: &Query{
+				SQL:  "SELECT * FROM `test_model` GROUP BY `age` HAVING (`first_name` = ?) AND (`age` = ?);",
+				Args: []any{"Hao", "3"},
+			},
+		},
+		{
+			// 聚合函数
+			name: "avg",
+			q: NewSelector[model.TestModel](db).GroupBy(NewColumn("Age")).
+				Having(NewAggregate("Age", AggregateFunctionAVG).EQ(18)),
+			wantQuery: &Query{
+				SQL:  "SELECT * FROM `test_model` GROUP BY `age` HAVING AVG(`age`) = ?;",
+				Args: []any{18},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			query, err := tc.q.Build()
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantQuery, query)
+		})
+	}
+}

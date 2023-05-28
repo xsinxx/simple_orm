@@ -12,6 +12,7 @@ type Selector[T any] struct {
 	sb          strings.Builder
 	table       string
 	groupBy     []*Column
+	having      *Predicate
 	where       []*Predicate
 	args        []any
 	tableModels *model.TableModel
@@ -40,6 +41,11 @@ func (s *Selector[T]) GroupBy(columns ...*Column) *Selector[T] {
 	return s
 }
 
+func (s *Selector[T]) Having(having *Predicate) *Selector[T] {
+	s.having = having
+	return s
+}
+
 func (s *Selector[T]) Build() (*Query, error) {
 	var (
 		t   T
@@ -50,7 +56,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 		return nil, err
 	}
 	s.sb.WriteString("SELECT * FROM ")
-	// 表名
+	// table aggregateFunction
 	if s.table == "" {
 		s.sb.WriteByte('`')
 		s.sb.WriteString(s.tableModels.TableName)
@@ -58,6 +64,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 	} else {
 		s.sb.WriteString(s.table)
 	}
+
 	// where
 	if len(s.where) > 0 {
 		s.sb.WriteString(" WHERE ")
@@ -70,6 +77,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 			return nil, err
 		}
 	}
+
 	// group by
 	if len(s.groupBy) > 0 {
 		s.sb.WriteString(" GROUP BY ")
@@ -83,6 +91,18 @@ func (s *Selector[T]) Build() (*Query, error) {
 			}
 		}
 	}
+
+	// having
+	if s.having != nil {
+		if len(s.groupBy) == 0 {
+			return nil, errors.New("[having] group by clause is not exists")
+		}
+		s.sb.WriteString(" HAVING ")
+		err = s.buildExpression(s.having)
+		if err != nil {
+			return nil, err
+		}
+	}
 	s.sb.WriteString(";")
 	return &Query{
 		SQL:  s.sb.String(),
@@ -94,6 +114,15 @@ func (s *Selector[T]) Build() (*Query, error) {
 // (`Age` > 13) AND (`Age` < 24)
 func (s *Selector[T]) buildExpression(e Expression) error {
 	switch expr := e.(type) {
+	case *Aggregate:
+		field, ok := s.tableModels.Col2Field[expr.name]
+		if !ok {
+			return errors.New("illegal field")
+		}
+		s.sb.WriteString(string(expr.aggregateFunction))
+		s.sb.WriteString("(`")
+		s.sb.WriteString(field.ColumnName)
+		s.sb.WriteString("`)")
 	case *Column: // 列， eg：`Age`
 		if _, ok := s.tableModels.Col2Field[expr.name]; !ok {
 			return errors.New("illegal field")
