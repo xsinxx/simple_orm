@@ -39,6 +39,7 @@ func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 	}
 	tag2Field := map[string]*Field{}
 	col2Field := map[string]*Field{}
+	columnNames := make([]string, 0)
 	for i := 0; i < typ.NumField(); i++ {
 		fd := typ.Field(i)
 		fdName := fd.Name
@@ -54,6 +55,7 @@ func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 		if tag == "" {
 			tag = fdName
 		}
+		columnNames = append(columnNames, underscoreName(fdName))
 		field := &Field{
 			ColumnName: underscoreName(fdName),
 			Typ:        fd.Type,
@@ -64,9 +66,10 @@ func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 		col2Field[fdName] = field
 	}
 	return &TableModel{
-		TableName: underscoreName(typ.Name()),
-		Tag2Field: tag2Field,
-		Col2Field: col2Field,
+		TableName:   underscoreName(typ.Name()),
+		Tag2Field:   tag2Field,
+		Col2Field:   col2Field,
+		ColumnNames: columnNames,
 	}, nil
 }
 

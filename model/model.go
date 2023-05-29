@@ -40,9 +40,10 @@ type Field struct {
 }
 
 type TableModel struct {
-	TableName string            // 表名
-	Tag2Field map[string]*Field // 标签名到字段的映射
-	Col2Field map[string]*Field // 列名到字段的映射
+	TableName   string            // 表名
+	Tag2Field   map[string]*Field // 标签名到字段的映射
+	Col2Field   map[string]*Field // 列名到字段的映射
+	ColumnNames []string          // 列名数组，由于map的遍历是乱序，因此用数组保证顺序
 }
 
 // Registry 注册中心，存储表信息
