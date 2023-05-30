@@ -52,6 +52,20 @@ func TestInserter_Build(t *testing.T) {
 				Args: []any{int64(1), "Deng", int8(18), int64(2), "Da", int8(19)},
 			},
 		},
+		{
+			// 指定列
+			name: "specify columns",
+			q: NewInserter[model.TestModel](db).Values(
+				&model.TestModel{
+					Id:        1,
+					FirstName: "Deng",
+					Age:       18,
+				}).Columns("FirstName", "Age"),
+			wantQuery: &Query{
+				SQL:  "INSERT INTO `test_model`(`first_name`,`age`) VALUES(?,?);",
+				Args: []any{"Deng", int8(18)},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

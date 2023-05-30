@@ -55,7 +55,7 @@ func (r *Registry) parseModel(typ reflect.Type) (*TableModel, error) {
 		if tag == "" {
 			tag = fdName
 		}
-		columnNames = append(columnNames, underscoreName(fdName))
+		columnNames = append(columnNames, fdName)
 		field := &Field{
 			ColumnName: underscoreName(fdName),
 			Typ:        fd.Type,
