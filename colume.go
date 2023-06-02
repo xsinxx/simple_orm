@@ -13,6 +13,10 @@ func (c *Column) expr() {
 
 }
 
+func (c *Column) assign() {
+
+}
+
 func NewColumn(name string) *Column {
 	return &Column{
 		name: name,
