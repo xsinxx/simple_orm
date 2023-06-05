@@ -1,24 +1,24 @@
 package simple_orm
 
 import (
+	"context"
+	"database/sql"
 	"errors"
-	"github.com/simple_orm/model"
-	"reflect"
-	"strings"
 )
 
 type Insert[T any] struct {
-	values         []any
-	db             *DB
-	args           []any
-	columns        []string
-	sb             strings.Builder
-	tableModels    *model.TableModel
-	onDuplicateKey *OnDuplicateKey
+	Builder
+	values  []any
+	db      *DB
+	columns []string
+	upsert  *UpsertKey
 }
 
 func NewInserter[T any](db *DB) *Insert[T] {
 	return &Insert[T]{
+		Builder: Builder{
+			dialect: db.dialect,
+		},
 		db: db,
 	}
 }
@@ -33,16 +33,16 @@ func (i *Insert[T]) Columns(columns ...string) *Insert[T] {
 	return i
 }
 
-// ==============================  OnDuplicateKeyBuilder =============================
+// ==============================  UpsertBuilder =============================
 
-func (i *Insert[T]) OnDuplicateKey() *OnDuplicateKeyBuilder[T] {
-	return &OnDuplicateKeyBuilder[T]{
+func (i *Insert[T]) OnDuplicateKey() *UpsertBuilder[T] {
+	return &UpsertBuilder[T]{
 		insert: i,
 	}
 }
 
-func (o *OnDuplicateKeyBuilder[T]) Update(assigns ...Assignable) *Insert[T] {
-	o.insert.onDuplicateKey = &OnDuplicateKey{
+func (o *UpsertBuilder[T]) Update(assigns ...Assignable) *Insert[T] {
+	o.insert.upsert = &UpsertKey{
 		assigns: assigns,
 	}
 	return o.insert
@@ -101,30 +101,23 @@ func (i *Insert[T]) Build() (*Query, error) {
 	}
 
 	// args
-	columnSet := map[string]struct{}{}
-	for _, column := range i.columns {
-		columnSet[column] = struct{}{}
-	}
 	for _, val := range i.values {
-		reflectVal := reflect.ValueOf(val).Elem()
-		reflectTyp := reflect.TypeOf(val).Elem()
-		for j := 0; j < reflectVal.NumField(); j++ {
-			fieldName := reflectTyp.Field(j).Name
-			if _, ok := columnSet[fieldName]; !ok {
-				continue
-			}
-			i.args = append(i.args, reflectVal.Field(j).Interface())
-		}
-	}
-
-	// on duplicate key update
-	if i.onDuplicateKey != nil {
-		i.sb.WriteString(" ON DUPLICATE KEY UPDATE ")
-		for _, assign := range i.onDuplicateKey.assigns {
-			err = i.BuildExpression(assign)
+		internalVal := i.db.creator(val, i.tableModels)
+		for _, colName := range i.columns {
+			// GetValByColName有两种实现方式反射 & Unsafe，默认是Unsafe
+			colVal, err := internalVal.GetValByColName(colName)
 			if err != nil {
 				return nil, err
 			}
+			i.args = append(i.args, colVal)
+		}
+	}
+
+	// upsert
+	if i.upsert != nil {
+		err = i.dialect.Upsert(&i.Builder, i.upsert)
+		if err != nil {
+			return nil, err
 		}
 	}
 	i.sb.WriteString(";")
@@ -134,31 +127,10 @@ func (i *Insert[T]) Build() (*Query, error) {
 	}, nil
 }
 
-func (i *Insert[T]) BuildExpression(assign Assignable) error {
-	switch e := assign.(type) {
-	case *Column:
-		columnName := e.name
-		field, ok := i.tableModels.Col2Field[columnName]
-		if !ok {
-			return errors.New("column name not exists")
-		}
-		// 详细结构参照单测
-		i.sb.WriteString("`")
-		i.sb.WriteString(field.ColumnName)
-		i.sb.WriteString("`=VALUES(`")
-		i.sb.WriteString(field.ColumnName)
-		i.sb.WriteString("`)")
-	case *Assignment:
-		columnName := e.ColumnName
-		field, ok := i.tableModels.Col2Field[columnName]
-		if !ok {
-			return errors.New("column name not exists")
-		}
-		i.sb.WriteString("`")
-		i.sb.WriteString(field.ColumnName)
-		i.sb.WriteString("`")
-		i.sb.WriteString("=?")
-		i.args = append(i.args, e.Val)
+func (i *Insert[T]) Exec(ctx context.Context) (sql.Result, error) {
+	query, err := i.Build()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return i.db.store.Exec(query.SQL, query.Args...)
 }

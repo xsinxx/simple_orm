@@ -13,6 +13,7 @@ type DB struct {
 	store   *sql.DB // 对应具体数据库的存储, 继承
 	r       *model.Registry
 	creator valuer.Creator // 运行时再执行的函数，默认unsafe
+	dialect Dialect        // 方言
 }
 
 func Open(driver string, dsn string, opts ...DBOption) (*DB, error) {
@@ -30,6 +31,7 @@ func OpenDB(store *sql.DB, opts ...DBOption) (*DB, error) {
 			TableModels: map[reflect.Type]*model.TableModel{},
 		},
 		creator: valuer.NewUnsafeValue,
+		dialect: mySQLDialect,
 	}
 	for _, opt := range opts {
 		opt(db)
@@ -47,5 +49,12 @@ func DBWithRegister(r *model.Registry) DBOption {
 func DBWithCreator(reflectCreator valuer.Creator) DBOption {
 	return func(db *DB) {
 		db.creator = reflectCreator
+	}
+}
+
+// DBWithDialect 默认是MySQL，支持配置
+func DBWithDialect(dialect Dialect) DBOption {
+	return func(db *DB) {
+		db.dialect = dialect
 	}
 }

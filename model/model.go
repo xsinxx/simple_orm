@@ -5,15 +5,6 @@ import (
 	"sync"
 )
 
-//type Query struct {
-//	SQL  string
-//	Args []any
-//}
-//
-//type QueryBuilder interface {
-//	Build() (*Query, error)
-//}
-
 type TestModel struct {
 	Id        int64
 	FirstName string

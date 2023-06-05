@@ -2,18 +2,14 @@ package simple_orm
 
 import (
 	"errors"
-	"github.com/simple_orm/model"
-	"strings"
 )
 
 type Delete[T any] struct {
-	values      []any
-	table       string
-	where       []*Predicate
-	db          *DB
-	args        []any
-	sb          strings.Builder
-	tableModels *model.TableModel
+	Builder
+	values []any
+	table  string
+	where  []*Predicate
+	db     *DB
 }
 
 func NewDeleter[T any](db *DB) *Delete[T] {

@@ -2,6 +2,7 @@ package valuer
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/simple_orm/model"
 	"reflect"
 	"unsafe"
@@ -38,4 +39,18 @@ func (u UnsafeValue) SetColumns(rows *sql.Rows) error {
 		colVal[i] = val.Interface()
 	}
 	return rows.Scan(colVal...)
+}
+
+func (u UnsafeValue) GetValByColName(colName string) (any, error) {
+	field, ok := u.tableModel.Col2Field[colName]
+	if !ok {
+		return nil, errors.New("colName not exists")
+	}
+	ptr := unsafe.Pointer(uintptr(u.address) + field.Offset)
+	if ptr == nil {
+		return nil, errors.New("offset not exists col")
+	}
+	// 将指针对应的数据赋予类型信息，再取值
+	val := reflect.NewAt(field.Typ, ptr).Elem()
+	return val.Interface(), nil
 }

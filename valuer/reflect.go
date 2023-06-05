@@ -2,13 +2,14 @@ package valuer
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/simple_orm/model"
 	"reflect"
 )
 
 type ReflectValue struct {
-	val  reflect.Value
-	meta *model.TableModel
+	val        reflect.Value
+	tableModel *model.TableModel
 }
 
 func NewReflectValue(val any, meta *model.TableModel) Value {
@@ -16,8 +17,8 @@ func NewReflectValue(val any, meta *model.TableModel) Value {
 		panic("val isn't struct ptr")
 	}
 	return ReflectValue{
-		val:  reflect.ValueOf(val).Elem(),
-		meta: meta,
+		val:        reflect.ValueOf(val).Elem(),
+		tableModel: meta,
 	}
 }
 
@@ -33,13 +34,13 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 		return err
 	}
 	// 数据库中字段不能出现model中未定义字段
-	if len(cols) > len(r.meta.Col2Field) {
+	if len(cols) > len(r.tableModel.Col2Field) {
 		return ColumnsNotMatch
 	}
 	colValues := make([]interface{}, len(cols))
 	colEleValues := make([]reflect.Value, len(cols))
 	for i, col := range cols {
-		field, ok := r.meta.Col2Field[col]
+		field, ok := r.tableModel.Col2Field[col]
 		if !ok {
 			return ColumnsNotExists
 		}
@@ -52,7 +53,7 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 		return err
 	}
 	for i, col := range cols {
-		field, ok := r.meta.Col2Field[col]
+		field, ok := r.tableModel.Col2Field[col]
 		if !ok {
 			return ColumnsNotExists
 		}
@@ -60,4 +61,12 @@ func (r ReflectValue) SetColumns(rows *sql.Rows) error {
 		fd.Set(colEleValues[i])
 	}
 	return nil
+}
+
+func (r ReflectValue) GetValByColName(colName string) (any, error) {
+	res := r.val.FieldByName(colName)
+	if res == (reflect.Value{}) {
+		return nil, errors.New("colName not exists")
+	}
+	return res.Interface(), nil
 }

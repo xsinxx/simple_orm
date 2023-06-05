@@ -1,9 +1,9 @@
 package simple_orm
 
-type OnDuplicateKeyBuilder[T any] struct {
+type UpsertBuilder[T any] struct {
 	insert *Insert[T]
 }
 
-type OnDuplicateKey struct {
+type UpsertKey struct {
 	assigns []Assignable
 }

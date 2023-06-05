@@ -3,27 +3,26 @@ package simple_orm
 import (
 	"context"
 	"errors"
-	"github.com/simple_orm/model"
-	"strings"
 )
 
 // Selector 用于构造 SELECT 语句
 type Selector[T any] struct {
-	sb          strings.Builder
-	table       string
-	where       []*Predicate
-	groupBy     []*Column
-	having      *Predicate
-	orderBy     []*OrderBy
-	limit       int
-	offset      int
-	args        []any
-	tableModels *model.TableModel
-	db          *DB
+	Builder
+	table   string
+	where   []*Predicate
+	groupBy []*Column
+	having  *Predicate
+	orderBy []*OrderBy
+	limit   int
+	offset  int
+	db      *DB
 }
 
 func NewSelector[T any](db *DB) *Selector[T] {
 	return &Selector[T]{
+		Builder: Builder{
+			dialect: db.dialect,
+		},
 		db: db,
 	}
 }
