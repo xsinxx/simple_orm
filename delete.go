@@ -1,6 +1,8 @@
 package simple_orm
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 )
 
@@ -122,4 +124,12 @@ func (d *Delete[T]) buildExpression(e Expression) error {
 		}
 	}
 	return nil
+}
+
+func (d *Delete[T]) Exec(ctx context.Context) (sql.Result, error) {
+	query, err := d.Build()
+	if err != nil {
+		return nil, err
+	}
+	return d.session.execContext(ctx, query.SQL, query.Args...)
 }
