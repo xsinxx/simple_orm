@@ -9,5 +9,4 @@ type Builder struct {
 	sb          strings.Builder
 	tableModels *model.TableModel
 	args        []any
-	dialect     Dialect
 }

@@ -6,15 +6,17 @@ import (
 
 type Delete[T any] struct {
 	Builder
-	values []any
-	table  string
-	where  []*Predicate
-	db     *DB
+	core
+	values  []any
+	table   string
+	where   []*Predicate
+	session session
 }
 
-func NewDeleter[T any](db *DB) *Delete[T] {
+func NewDeleter[T any](session session) *Delete[T] {
 	return &Delete[T]{
-		db: db,
+		core:    session.getCore(),
+		session: session,
 	}
 }
 
@@ -34,7 +36,7 @@ func (d *Delete[T]) Build() (*Query, error) {
 		t   T
 		err error
 	)
-	d.tableModels, err = d.db.r.Get(t)
+	d.tableModels, err = d.r.Get(t)
 	if err != nil {
 		return nil, err
 	}

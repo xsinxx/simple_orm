@@ -7,19 +7,18 @@ import (
 )
 
 type Insert[T any] struct {
-	Builder
+	Builder         // builder是Insert & Select公共部分
+	core            // core中是元数据信息
+	session session // session是db或tx
 	values  []any
-	db      *DB
 	columns []string
 	upsert  *UpsertKey
 }
 
-func NewInserter[T any](db *DB) *Insert[T] {
+func NewInserter[T any](session session) *Insert[T] {
 	return &Insert[T]{
-		Builder: Builder{
-			dialect: db.dialect,
-		},
-		db: db,
+		core:    session.getCore(),
+		session: session,
 	}
 }
 
@@ -56,7 +55,7 @@ func (i *Insert[T]) Build() (*Query, error) {
 		t   T
 		err error
 	)
-	tableModel, err := i.db.r.Get(t)
+	tableModel, err := i.r.Get(t)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +101,7 @@ func (i *Insert[T]) Build() (*Query, error) {
 
 	// args
 	for _, val := range i.values {
-		internalVal := i.db.creator(val, i.tableModels)
+		internalVal := i.creator(val, i.tableModels)
 		for _, colName := range i.columns {
 			// GetValByColName有两种实现方式反射 & Unsafe，默认是Unsafe
 			colVal, err := internalVal.GetValByColName(colName)
@@ -132,5 +131,5 @@ func (i *Insert[T]) Exec(ctx context.Context) (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return i.db.store.Exec(query.SQL, query.Args...)
+	return i.session.execContext(ctx, query.SQL, query.Args...)
 }

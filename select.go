@@ -7,7 +7,9 @@ import (
 
 // Selector 用于构造 SELECT 语句
 type Selector[T any] struct {
-	Builder
+	Builder         // builder是Insert & Select公共部分
+	core            // core中是元数据信息
+	session session // session是db或tx
 	table   string
 	where   []*Predicate
 	groupBy []*Column
@@ -15,15 +17,12 @@ type Selector[T any] struct {
 	orderBy []*OrderBy
 	limit   int
 	offset  int
-	db      *DB
 }
 
-func NewSelector[T any](db *DB) *Selector[T] {
+func NewSelector[T any](session session) *Selector[T] {
 	return &Selector[T]{
-		Builder: Builder{
-			dialect: db.dialect,
-		},
-		db: db,
+		core:    session.getCore(),
+		session: session,
 	}
 }
 
@@ -68,7 +67,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 		t   T
 		err error
 	)
-	s.tableModels, err = s.db.r.Get(t)
+	s.tableModels, err = s.r.Get(t)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +213,7 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.store.QueryContext(ctx, query.SQL, query.Args...)
+	rows, err := s.session.queryContext(ctx, query.SQL, query.Args)
 	if err != nil {
 		return nil, err
 	}
@@ -223,11 +222,11 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	}
 
 	tp := new(T)
-	tableModel, err := s.db.r.Get(tp)
+	tableModel, err := s.r.Get(tp)
 	if err != nil {
 		return nil, err
 	}
-	val := s.db.creator(tp, tableModel)
+	val := s.creator(tp, tableModel)
 	err = val.SetColumns(rows)
 	return tp, err
 }
@@ -237,18 +236,18 @@ func (s *Selector[T]) GetMul(ctx context.Context) ([]*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.store.QueryContext(ctx, query.SQL, query.Args...)
+	rows, err := s.session.queryContext(ctx, query.SQL, query.Args...)
 	if err != nil {
 		return nil, err
 	}
 	tpArr := make([]*T, 0)
 	for rows.Next() {
 		tp := new(T)
-		tableModel, err := s.db.r.Get(tp)
+		tableModel, err := s.r.Get(tp)
 		if err != nil {
 			return nil, err
 		}
-		val := s.db.creator(tp, tableModel)
+		val := s.creator(tp, tableModel)
 		err = val.SetColumns(rows)
 		if err != nil {
 			return nil, err
