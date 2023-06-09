@@ -16,6 +16,9 @@ type DB struct {
 	store *sql.DB // 对应具体数据库的存储
 }
 
+type TxKey struct {
+}
+
 func Open(driver string, dsn string, opts ...DBOption) (*DB, error) {
 	db, err := sql.Open(driver, dsn)
 	if err != nil {
@@ -71,6 +74,21 @@ func (db *DB) beginTx(ctx context.Context, opts *sql.TxOptions) (*TX, error) {
 		tx: tx,
 		db: db,
 	}, nil
+}
+
+// 事务扩散，当ctx中无事务则直接开启需求
+func (db *DB) beginTxIfNotExists(ctx context.Context, opts *sql.TxOptions) (context.Context, *TX, error) {
+	txInContext := ctx.Value(TxKey{})
+	if txInContext != nil {
+		t := txInContext.(*TX)
+		return ctx, t, nil
+	}
+	tx, err := db.store.BeginTx(ctx, opts)
+	if err != nil {
+		return ctx, nil, err
+	}
+	ctx = context.WithValue(ctx, TxKey{}, tx)
+	return ctx, &TX{tx: tx, db: db}, nil
 }
 
 // 事务闭包：当执行事务出错或执行中发生panic需要回滚
