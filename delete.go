@@ -126,10 +126,35 @@ func (d *Delete[T]) buildExpression(e Expression) error {
 	return nil
 }
 
-func (d *Delete[T]) Exec(ctx context.Context) (sql.Result, error) {
+func (d *Delete[T]) execHandler(ctx context.Context, qc *QueryContext) *QueryResult {
 	query, err := d.Build()
 	if err != nil {
-		return nil, err
+		return &QueryResult{
+			Err: err,
+		}
 	}
-	return d.session.execContext(ctx, query.SQL, query.Args...)
+	result, err := d.session.execContext(ctx, query.SQL, query.Args...)
+	if err != nil {
+		return &QueryResult{
+			Err: err,
+		}
+	}
+	return &QueryResult{
+		Result: result,
+		Err:    err,
+	}
+}
+
+func (d *Delete[T]) Exec(ctx context.Context) (sql.Result, error) {
+	var handler HandleFunc = d.execHandler
+	middlewares := d.middleWares
+	for idx := len(middlewares) - 1; idx >= 0; idx-- {
+		handler = middlewares[idx](handler)
+	}
+	qc := &QueryContext{}
+	queryResult := handler(ctx, qc)
+	if queryResult.Err != nil {
+		return nil, queryResult.Err
+	}
+	return queryResult.Result.(sql.Result), nil
 }

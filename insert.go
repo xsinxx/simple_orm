@@ -126,10 +126,35 @@ func (i *Insert[T]) Build() (*Query, error) {
 	}, nil
 }
 
-func (i *Insert[T]) Exec(ctx context.Context) (sql.Result, error) {
+func (i *Insert[T]) execHandler(ctx context.Context, qc *QueryContext) *QueryResult {
 	query, err := i.Build()
 	if err != nil {
-		return nil, err
+		return &QueryResult{
+			Err: err,
+		}
 	}
-	return i.session.execContext(ctx, query.SQL, query.Args...)
+	result, err := i.session.execContext(ctx, query.SQL, query.Args...)
+	if err != nil {
+		return &QueryResult{
+			Err: err,
+		}
+	}
+	return &QueryResult{
+		Result: result,
+		Err:    err,
+	}
+}
+
+func (i *Insert[T]) Exec(ctx context.Context) (sql.Result, error) {
+	var handler HandleFunc = i.execHandler
+	middlewares := i.middleWares
+	for idx := len(middlewares) - 1; idx >= 0; idx-- {
+		handler = middlewares[idx](handler)
+	}
+	qc := &QueryContext{}
+	queryResult := handler(ctx, qc)
+	if queryResult.Err != nil {
+		return nil, queryResult.Err
+	}
+	return queryResult.Result.(sql.Result), nil
 }
