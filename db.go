@@ -122,11 +122,11 @@ func (db *DB) doTx(ctx context.Context, task func(ctx2 context.Context, tx *TX) 
 }
 
 func (db *DB) execContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return db.store.ExecContext(ctx, query, args)
+	return db.store.ExecContext(ctx, query, args...)
 }
 
 func (db *DB) queryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return db.store.QueryContext(ctx, query, args)
+	return db.store.QueryContext(ctx, query, args...)
 }
 
 func (db *DB) getCore() core {

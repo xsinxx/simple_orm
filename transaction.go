@@ -21,17 +21,18 @@ type TX struct {
 }
 
 type core struct {
-	r       *model.Registry
-	creator valuer.Creator // 运行时再执行的函数，默认unsafe
-	dialect Dialect        // 方言
+	r           *model.Registry
+	creator     valuer.Creator // 运行时再执行的函数，默认unsafe
+	dialect     Dialect        // 方言
+	middleWares []MiddleWare   // 切片的中间件
 }
 
 func (t *TX) queryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return t.tx.QueryContext(ctx, query, args)
+	return t.tx.QueryContext(ctx, query, args...)
 }
 
 func (t *TX) execContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return t.tx.ExecContext(ctx, query, args)
+	return t.tx.ExecContext(ctx, query, args...)
 }
 
 func (t *TX) getCore() core {

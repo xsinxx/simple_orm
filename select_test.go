@@ -1,7 +1,9 @@
 package simple_orm
 
 import (
+	"context"
 	"errors"
+	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/simple_orm/model"
 	"github.com/stretchr/testify/assert"
@@ -318,6 +320,70 @@ func TestSelector_OffsetLimit(t *testing.T) {
 				return
 			}
 			assert.Equal(t, tc.wantQuery, query)
+		})
+	}
+}
+
+func TestSelector_Get(t *testing.T) {
+	testCases := []struct {
+		name     string
+		query    string
+		mockErr  error
+		mockRows *sqlmock.Rows
+		wantErr  error
+		wantVal  *model.TestModel
+	}{
+		{
+			name:    "too many column",
+			wantErr: errors.New("the number of values in dest must be the same as the number of columns in Row"),
+			query:   "SELECT .*",
+			mockRows: func() *sqlmock.Rows {
+				res := sqlmock.NewRows([]string{"id", "first_name", "age", "last_name", "extra_column"})
+				res.AddRow([]byte("1"), []byte("Da"), []byte("18"), []byte("Ming"), []byte("nothing"))
+				return res
+			}(),
+		},
+		{
+			name:  "get data",
+			query: "SELECT .*",
+			mockRows: func() *sqlmock.Rows {
+				res := sqlmock.NewRows([]string{"Id", "FirstName", "Age"})
+				res.AddRow([]byte("1"), []byte("Da"), []byte("18"))
+				return res
+			}(),
+			wantVal: &model.TestModel{
+				Id:        1,
+				FirstName: "Da",
+				Age:       18,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = mockDB.Close() }()
+			db, err := OpenDB(mockDB)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// remind: 测试的SQL可能包含通配符（如 "*"）可能造成sqlmock无法执行
+			// 当db.Query执行ExpectQuery中的语句时，返回结果是WillReturnRows中写入的结果
+			exp := mock.ExpectQuery(tc.query)
+			if tc.mockErr != nil {
+				exp.WillReturnError(tc.mockErr)
+			} else {
+				exp.WillReturnRows(tc.mockRows)
+			}
+			res, err := NewSelector[model.TestModel](db).Get(context.Background())
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.Equal(t, tc.wantVal, res)
 		})
 	}
 }
