@@ -214,7 +214,9 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		handler = middlewares[i](handler)
 	}
-	qc := &QueryContext{}
+	qc := &QueryContext{
+		Builder: s,
+	}
 	queryResult := handler(ctx, qc)
 	if queryResult.Err != nil {
 		return nil, queryResult.Err

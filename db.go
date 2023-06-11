@@ -64,6 +64,12 @@ func DBWithDialect(dialect Dialect) DBOption {
 	}
 }
 
+func DBWithMiddleWare(middleWares ...MiddleWare) DBOption {
+	return func(db *DB) {
+		db.middleWares = append(db.middleWares, middleWares...)
+	}
+}
+
 // 开启事务应归属于db，事务的提交回滚属于事务
 func (db *DB) beginTx(ctx context.Context, opts *sql.TxOptions) (*TX, error) {
 	tx, err := db.store.BeginTx(ctx, opts)

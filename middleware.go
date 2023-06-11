@@ -8,6 +8,7 @@ type QueryResult struct {
 }
 
 type QueryContext struct {
+	Builder QueryBuilder
 }
 
 type MiddleWare func(next HandleFunc) HandleFunc
