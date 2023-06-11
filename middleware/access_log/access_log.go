@@ -1,8 +1,8 @@
-package accessLog
+package access_log
 
 import (
 	"context"
-	"github.com/davecgh/go-spew/spew"
+	"fmt"
 	"github.com/simple_orm"
 )
 
@@ -11,10 +11,6 @@ type LogMiddleWare struct {
 
 func NewLogMiddleWare() *LogMiddleWare {
 	return &LogMiddleWare{}
-}
-
-func (l *LogMiddleWare) printLog(query *simple_orm.Query) {
-	spew.Println(query)
 }
 
 func (l *LogMiddleWare) Build() simple_orm.MiddleWare {
@@ -26,7 +22,7 @@ func (l *LogMiddleWare) Build() simple_orm.MiddleWare {
 					Err: err,
 				}
 			}
-			l.printLog(query)
+			fmt.Println(query.SQL)
 			return next(ctx, qc)
 		}
 	}

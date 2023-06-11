@@ -1,4 +1,4 @@
-package accessLog
+package access_log
 
 import (
 	"context"
@@ -9,14 +9,13 @@ import (
 )
 
 func TestMiddlewareBuilder_Build(t *testing.T) {
-	logMiddleWare := NewLogMiddleWare()
-	options := simple_orm.DBWithMiddleWare(logMiddleWare.Build())
 	mockDB, _, err := sqlmock.New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = mockDB.Close() }()
-	db, err := simple_orm.OpenDB(mockDB, options)
+	db, err := simple_orm.OpenDB(mockDB,
+		simple_orm.DBWithMiddleWare(NewLogMiddleWare().Build()))
 	if err != nil {
 		t.Fatal(err)
 	}
