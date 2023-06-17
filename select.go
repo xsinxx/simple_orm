@@ -209,101 +209,13 @@ func (s *Selector[T]) buildExpression(e Expression) error {
 }
 
 func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
-	var handler HandleFunc = s.getHandler
-	middlewares := s.middleWares
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		handler = middlewares[i](handler)
-	}
-	qc := &QueryContext{
+	return get[T](ctx, s.core, s.session, &QueryContext{
 		Builder: s,
-	}
-	queryResult := handler(ctx, qc)
-	if queryResult.Err != nil {
-		return nil, queryResult.Err
-	}
-	return queryResult.Result.(*T), nil
+	})
 }
 
 func (s *Selector[T]) GetMul(ctx context.Context) ([]*T, error) {
-	var handler HandleFunc = s.getMulHandler
-	middlewares := s.middleWares
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		handler = middlewares[i](handler)
-	}
-	qc := &QueryContext{}
-	queryResult := handler(ctx, qc)
-	if queryResult.Err != nil {
-		return nil, queryResult.Err
-	}
-	return queryResult.Result.([]*T), nil
-}
-
-func (s *Selector[T]) getHandler(ctx context.Context, qc *QueryContext) *QueryResult {
-	query, err := s.Build()
-	if err != nil {
-		return &QueryResult{
-			Err: err,
-		}
-	}
-	rows, err := s.session.queryContext(ctx, query.SQL, query.Args...)
-	if err != nil {
-		return &QueryResult{
-			Err: err,
-		}
-	}
-	if !rows.Next() {
-		return &QueryResult{
-			Err: errors.New("not data"),
-		}
-	}
-
-	tp := new(T)
-	tableModel, err := s.r.Get(tp)
-	if err != nil {
-		return &QueryResult{
-			Err: err,
-		}
-	}
-	val := s.creator(tp, tableModel)
-	err = val.SetColumns(rows)
-	return &QueryResult{
-		Result: tp,
-		Err:    err,
-	}
-}
-
-func (s *Selector[T]) getMulHandler(ctx context.Context, qc *QueryContext) *QueryResult {
-	query, err := s.Build()
-	if err != nil {
-		return &QueryResult{
-			Err: err,
-		}
-	}
-	rows, err := s.session.queryContext(ctx, query.SQL, query.Args...)
-	if err != nil {
-		return &QueryResult{
-			Err: err,
-		}
-	}
-	tpArr := make([]*T, 0)
-	for rows.Next() {
-		tp := new(T)
-		tableModel, err := s.r.Get(tp)
-		if err != nil {
-			return &QueryResult{
-				Err: err,
-			}
-		}
-		val := s.creator(tp, tableModel)
-		err = val.SetColumns(rows)
-		if err != nil {
-			return &QueryResult{
-				Err: err,
-			}
-		}
-		tpArr = append(tpArr, tp)
-	}
-	return &QueryResult{
-		Result: tpArr,
-	}
+	return getMul[T](ctx, s.core, s.session, &QueryContext{
+		Builder: s,
+	})
 }
