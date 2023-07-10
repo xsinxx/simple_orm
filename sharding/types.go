@@ -1,13 +1,19 @@
 package sharding
 
+import (
+	"context"
+	"github.com/simple_orm/model"
+)
+
 type Algorithm interface {
-	Sharding() ([]*DataSource, error)
+	Sharding(ctx context.Context, op model.Op, val int64) ([]*DataSource, error)
+	Broadcast(ctx context.Context) ([]*DataSource, error)
 }
 
 type Pattern struct {
-	Base       int64
-	Name       string
-	IsSharding bool
+	Base        int64
+	DefaultName string
+	IsSharding  bool
 }
 
 type DataSource struct {
