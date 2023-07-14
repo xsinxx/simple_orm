@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/simple_orm/model"
+	"github.com/simple_orm/sharding"
 	"github.com/simple_orm/valuer"
 )
 
@@ -25,6 +26,7 @@ type core struct {
 	creator     valuer.Creator // 运行时再执行的函数，默认unsafe
 	dialect     Dialect        // 方言
 	middleWares []MiddleWare   // 切片的中间件
+	algorithm   sharding.Algorithm
 }
 
 func (t *TX) queryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {

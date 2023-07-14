@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"github.com/simple_orm/model"
 	"github.com/simple_orm/sharding"
-	"strings"
+	"github.com/valyala/bytebufferpool"
 )
 
 type ShardingBuilder struct {
 	algorithm   sharding.Algorithm
-	sb          strings.Builder
+	sb          *bytebufferpool.ByteBuffer
 	tableModels *model.TableModel
 	args        []any
 }
 
-func (s *ShardingBuilder) findDataSource(where ...*Predicate) ([]*sharding.DataSource, error) {
+func (s *ShardingBuilder) FindDataSource(where ...*Predicate) ([]*sharding.DataSource, error) {
 	// 有where语句尝试分库分表
 	if len(where) > 0 {
 		predicate := where[0]
@@ -25,7 +25,7 @@ func (s *ShardingBuilder) findDataSource(where ...*Predicate) ([]*sharding.DataS
 		return s.findDataSourceByAlgorithm(predicate)
 	}
 	// 无where语句则广播
-	return s.findDataSourceByBroadcast()
+	return s.algorithm.Broadcast()
 }
 
 func (s *ShardingBuilder) findDataSourceByAlgorithm(predicate *Predicate) ([]*sharding.DataSource, error) {
@@ -82,21 +82,18 @@ func (s *ShardingBuilder) findDataSourceByAlgorithm(predicate *Predicate) ([]*sh
 		if !ok {
 			return []*sharding.DataSource{}, errors.New("right is not a value")
 		}
-		return s.algorithm.Sharding()
+		val, ok := right.val.(int)
+		if !ok {
+			return []*sharding.DataSource{}, errors.New("right is not int type")
+		}
+		return s.algorithm.Sharding(predicate.op, int64(val))
 	default:
 		return []*sharding.DataSource{}, nil
 	}
 }
 
-func equal(left, right *sharding.DataSource) bool {
-	if left == nil || right == nil {
-		return false
-	}
-	return left.DB == right.DB && left.Name == right.Name && left.Table == right.Table
-}
-
 func getKey(datsSource *sharding.DataSource) string {
-	return fmt.Sprintf("Name:%s, DB:%s, Table:%s", datsSource.Name, datsSource.DB, datsSource.Table)
+	return fmt.Sprintf("DB:%s, Table:%s", datsSource.DB, datsSource.Table)
 }
 
 func intersection(left, right []*sharding.DataSource) []*sharding.DataSource {
@@ -132,8 +129,4 @@ func union(left, right []*sharding.DataSource) []*sharding.DataSource {
 	}
 
 	return res
-}
-
-func (s *ShardingBuilder) findDataSourceByBroadcast() ([]*sharding.DataSource, error) {
-
 }

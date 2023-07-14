@@ -1,5 +1,10 @@
 package simple_orm
 
+import (
+	"errors"
+	"github.com/simple_orm/sharding"
+)
+
 type ShardingSelector struct {
 	ShardingBuilder         // shardingBuilder是SQL的公共部分
 	core                    // core中是元数据信息
@@ -30,6 +35,20 @@ func (s *ShardingSelector[T]) Build() ([]*Query, error) {
 		return nil, err
 	}
 	s.tableModels = tableModel
+	if s.core.algorithm == nil {
+		return []*Query{}, errors.New("no valid algorithm")
+	}
+	s.ShardingBuilder.algorithm = s.core.algorithm
+	dataSources, err := s.FindDataSource(s.where...)
+	queries := make([]*Query, 0)
+	// 构建单独的query
+	for _, dataSource := range dataSources {
+		queries = append(queries, s.buildQuery(dataSource))
+	}
+	return queries, nil
+}
+
+func (s *ShardingSelector[T]) buildQuery(dataSource *sharding.DataSource) *Query {
 
 }
 

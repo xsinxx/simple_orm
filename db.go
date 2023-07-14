@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/hashicorp/go-multierror"
 	"github.com/simple_orm/model"
+	"github.com/simple_orm/sharding"
 	"github.com/simple_orm/valuer"
 	"reflect"
 )
@@ -30,7 +31,7 @@ func Open(driver string, dsn string, opts ...DBOption) (*DB, error) {
 func OpenDB(store *sql.DB, opts ...DBOption) (*DB, error) {
 	db := &DB{
 		store: store,
-		core: core{
+		core: core{ // 分片算法不应该提供默认版本
 			r: &model.Registry{
 				TableModels: map[reflect.Type]*model.TableModel{},
 			},
@@ -42,6 +43,12 @@ func OpenDB(store *sql.DB, opts ...DBOption) (*DB, error) {
 		opt(db)
 	}
 	return db, nil
+}
+
+func DBWithShardingAlgorithm(algorithm sharding.Algorithm) DBOption {
+	return func(db *DB) {
+		db.algorithm = algorithm
+	}
 }
 
 func DBWithRegister(r *model.Registry) DBOption {

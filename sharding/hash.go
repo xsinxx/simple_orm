@@ -14,6 +14,15 @@ type Hash struct {
 	TBPattern      *Pattern
 }
 
+func NewHashAlgorithm(shardingKey string, shardingKeySet map[string]struct{}, dBPattern *Pattern, tBPattern *Pattern) Algorithm {
+	return &Hash{
+		ShardingKey:    shardingKey,
+		ShardingKeySet: shardingKeySet,
+		DBPattern:      dBPattern,
+		TBPattern:      tBPattern,
+	}
+}
+
 func (h *Hash) Sharding(ctx context.Context, op model.Op, val int64) ([]*DataSource, error) {
 	if h.ShardingKey == "" {
 		return []*DataSource{}, errors.New("sharding key is empty")
