@@ -1,7 +1,6 @@
 package sharding
 
 import (
-	"context"
 	"errors"
 	"github.com/simple_orm/model"
 	"strconv"
@@ -23,13 +22,13 @@ func NewHashAlgorithm(shardingKey string, shardingKeySet map[string]struct{}, dB
 	}
 }
 
-func (h *Hash) Sharding(ctx context.Context, op model.Op, val int64) ([]*DataSource, error) {
+func (h *Hash) Sharding(op model.Op, val int64) ([]*DataSource, error) {
 	if h.ShardingKey == "" {
 		return []*DataSource{}, errors.New("sharding key is empty")
 	}
 	// 不是sharding key则广播查找
 	if _, ok := h.ShardingKeySet[h.ShardingKey]; !ok {
-		return h.Broadcast(ctx)
+		return h.Broadcast()
 	}
 	switch op {
 	case model.OpEQ:
@@ -48,13 +47,13 @@ func (h *Hash) Sharding(ctx context.Context, op model.Op, val int64) ([]*DataSou
 			},
 		}, nil
 	case model.OpLT, model.OpGT:
-		return h.Broadcast(ctx)
+		return h.Broadcast()
 	default:
 		return []*DataSource{}, nil
 	}
 }
 
-func (h *Hash) Broadcast(ctx context.Context) ([]*DataSource, error) {
+func (h *Hash) Broadcast() ([]*DataSource, error) {
 	if h.DBPattern.IsSharding && h.TBPattern.IsSharding { // 分库分表
 		return h.shardingDBAndTable()
 	} else if h.DBPattern.IsSharding { // 仅分库

@@ -9,10 +9,10 @@ import (
 )
 
 type ShardingBuilder struct {
-	algorithm   sharding.Algorithm
-	sb          *bytebufferpool.ByteBuffer
-	tableModels *model.TableModel
-	args        []any
+	algorithm    sharding.Algorithm
+	stringBuffer *bytebufferpool.ByteBuffer
+	tableModels  *model.TableModel
+	args         []any
 }
 
 func (s *ShardingBuilder) FindDataSource(where ...*Predicate) ([]*sharding.DataSource, error) {
